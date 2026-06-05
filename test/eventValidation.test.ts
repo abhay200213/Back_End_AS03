@@ -1,4 +1,4 @@
-import { createEventSchema } from "../src/validations/eventValidation";
+import { createEventSchema } from "../src/api/v1/validation/eventValidation";
 
 const futureDate = (): string => {
     const date = new Date();
