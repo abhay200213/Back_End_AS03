@@ -1,27 +1,10 @@
-type FirestoreDocument = {
-    set: (data: unknown) => Promise<void>;
-    get: () => Promise<{
-        exists: boolean;
-        data: () => unknown;
-    }>;
-    delete: () => Promise<void>;
-};
+import admin from "firebase-admin";
+import serviceAccount from "../serviceAccountKey.json";
 
-type FirestoreCollection = {
-    doc: (id: string) => FirestoreDocument;
-    get: () => Promise<{
-        docs: Array<{
-            data: () => unknown;
-        }>;
-    }>;
-};
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+    });
+}
 
-type FirestoreDb = {
-    collection: (name: string) => FirestoreCollection;
-};
-
-export const db: FirestoreDb = {
-    collection: () => {
-        throw new Error("Firestore not configured yet");
-    },
-};
+export const db = admin.firestore();

@@ -1,87 +1,120 @@
-import { db } from "../../../../config/firebaseConfig";
 import { CreateEventInput, Event, UpdateEventInput } from "../models/eventModel";
+import {
+    createDocument,
+    deleteDocument,
+    getDocumentById,
+    getDocuments,
+    updateDocument,
+} from "../repositories/firestoreRepository";
 
 const EVENTS_COLLECTION = "events";
 
 const generateEventId = (): string => {
-    const timestamp = Date.now().toString();
-    return `evt_${timestamp}`;
+    return `evt_${Date.now()}`;
 };
 
 export const createEvent = async (eventData: CreateEventInput): Promise<Event> => {
-    const now = new Date().toISOString();
-    const id = generateEventId();
+    try {
+        const now = new Date().toISOString();
+        const id = generateEventId();
 
-    const event: Event = {
-        id,
-        name: eventData.name,
-        date: new Date(eventData.date).toISOString(),
-        capacity: eventData.capacity,
-        registrationCount: eventData.registrationCount ?? 0,
-        status: eventData.status ?? "active",
-        category: eventData.category ?? "general",
-        createdAt: now,
-        updatedAt: now,
-    };
+        const event: Event = {
+            id,
+            name: eventData.name,
+            date: new Date(eventData.date).toISOString(),
+            capacity: eventData.capacity,
+            registrationCount: eventData.registrationCount ?? 0,
+            status: eventData.status ?? "active",
+            category: eventData.category ?? "general",
+            createdAt: now,
+            updatedAt: now,
+        };
 
-    await db.collection(EVENTS_COLLECTION).doc(id).set(event);
+        await createDocument<Event>(EVENTS_COLLECTION, event, id);
 
-    return event;
+        return event;
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to create event: ${errorMessage}`);
+    }
 };
 
 export const getAllEvents = async (): Promise<Event[]> => {
-    const snapshot = await db.collection(EVENTS_COLLECTION).get();
+    try {
+        const snapshot = await getDocuments(EVENTS_COLLECTION);
 
-    return snapshot.docs.map((doc) => doc.data() as Event);
+        return snapshot.docs.map((doc) => doc.data() as Event);
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to retrieve events: ${errorMessage}`);
+    }
 };
 
 export const getEventById = async (id: string): Promise<Event | null> => {
-    const doc = await db.collection(EVENTS_COLLECTION).doc(id).get();
+    try {
+        const doc = await getDocumentById(EVENTS_COLLECTION, id);
 
-    if (!doc.exists) {
-        return null;
+        if (!doc) {
+            return null;
+        }
+
+        return doc.data() as Event;
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to retrieve event: ${errorMessage}`);
     }
-
-    return doc.data() as Event;
 };
 
 export const updateEvent = async (
     id: string,
     eventData: UpdateEventInput
 ): Promise<Event | null> => {
-    const eventRef = db.collection(EVENTS_COLLECTION).doc(id);
-    const doc = await eventRef.get();
+    try {
+        const doc = await getDocumentById(EVENTS_COLLECTION, id);
 
-    if (!doc.exists) {
-        return null;
+        if (!doc) {
+            return null;
+        }
+
+        const existingEvent = doc.data() as Event;
+        const now = new Date().toISOString();
+
+        const updatedEvent: Event = {
+            ...existingEvent,
+            ...eventData,
+            date: eventData.date
+                ? new Date(eventData.date).toISOString()
+                : existingEvent.date,
+            updatedAt: now,
+        };
+
+        await updateDocument<Event>(EVENTS_COLLECTION, id, updatedEvent);
+
+        return updatedEvent;
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to update event: ${errorMessage}`);
     }
-
-    const existingEvent = doc.data() as Event;
-    const now = new Date().toISOString();
-
-    const updatedEvent: Event = {
-        ...existingEvent,
-        ...eventData,
-        date: eventData.date
-            ? new Date(eventData.date).toISOString()
-            : existingEvent.date,
-        updatedAt: now,
-    };
-
-    await eventRef.set(updatedEvent);
-
-    return updatedEvent;
 };
 
 export const deleteEvent = async (id: string): Promise<boolean> => {
-    const eventRef = db.collection(EVENTS_COLLECTION).doc(id);
-    const doc = await eventRef.get();
+    try {
+        const doc = await getDocumentById(EVENTS_COLLECTION, id);
 
-    if (!doc.exists) {
-        return false;
+        if (!doc) {
+            return false;
+        }
+
+        await deleteDocument(EVENTS_COLLECTION, id);
+
+        return true;
+    } catch (error: unknown) {
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error";
+        throw new Error(`Failed to delete event: ${errorMessage}`);
     }
-
-    await eventRef.delete();
-
-    return true;
 };
