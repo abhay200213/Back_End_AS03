@@ -1,2 +1,5 @@
 node_modules/
 dist/
+serviceAccountKey.json
+firebaseServiceAccount.json
+*.serviceAccountKey.json
